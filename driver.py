@@ -85,30 +85,17 @@ def hill_climbing(startState):
     global MaxFrontier, GoalNode, MaxSearchDeep
 
     boardVisited = set()
-    stack = list([PuzzleState(startState, None, None, 0, 0, 0)])
-    while stack:
-        node = stack.pop()
-        boardVisited.add(node.map)
-        if node.state == GoalState:
-            GoalNode = node
-            return stack
-        #inverse the order of next paths for execution purposes
-        possiblePaths = reversed(subNodes(node))
-        bestPath = None
-        bestEvaluation = float('-inf')
-        for path in possiblePaths:
-            if path.map not in boardVisited:
-                evaluation = Heuristic(path)  # You need to define the evaluation function
-                if evaluation > bestEvaluation:
-                    bestEvaluation = evaluation
-                    bestPath = path
-        if bestPath:
-            stack.append(bestPath)
-            boardVisited.add(bestPath.map)
-            if bestPath.depth > MaxSearchDeep:
-                MaxSearchDeep = 1 + MaxSearchDeep
-        if len(stack) > MaxFrontier:
-            MaxFrontier = len(stack)
+    current_node = PuzzleState(startState, None, None, 0, 0, 0)
+    while current_node.state != GoalState:
+        boardVisited.add(current_node.map)
+        nextNode = None
+        for path in reversed(subNodes(current_node)):
+            if path.map not in boardVisited and (nextNode is None or Heuristic(path) > Heuristic(nextNode)):
+                nextNode = path
+        if nextNode is None:
+            return current_node
+        current_node = nextNode
+    return current_node
 
 #Best First Search*************************************************
 def best_first_search(startState):
@@ -202,6 +189,9 @@ def ast(startState):
                 if path.depth > MaxSearchDeep:
                     MaxSearchDeep = 1 + MaxSearchDeep
         
+#Manhattan distance
+def Manhattan(currentNode, goalNode):
+    return abs(currentNode.x - goalNode.x) + abs(currentNode.y - goalNode.y)
 
 #Heuristic: distance to root numbers
 values_0 = [0,1,2,1,2,3,2,3,4]
