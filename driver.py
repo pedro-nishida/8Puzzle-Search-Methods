@@ -2,6 +2,7 @@ import argparse
 import time
 import timeit
 from collections import deque
+import heapq
 
 
 #Information *****************************************************
@@ -78,7 +79,94 @@ def dfs(startState):
                     MaxSearchDeep = 1 + MaxSearchDeep
         if len(stack) > MaxFrontier:
             MaxFrontier = len(stack)
-    
+
+#Hill Climbing*****************************************************
+def hill_climbing(startState):
+    global MaxFrontier, GoalNode, MaxSearchDeep
+
+    boardVisited = set()
+    stack = list([PuzzleState(startState, None, None, 0, 0, 0)])
+    while stack:
+        node = stack.pop()
+        boardVisited.add(node.map)
+        if node.state == GoalState:
+            GoalNode = node
+            return stack
+        #inverse the order of next paths for execution purposes
+        possiblePaths = reversed(subNodes(node))
+        bestPath = None
+        bestEvaluation = float('-inf')
+        for path in possiblePaths:
+            if path.map not in boardVisited:
+                evaluation = Heuristic(path)  # You need to define the evaluation function
+                if evaluation > bestEvaluation:
+                    bestEvaluation = evaluation
+                    bestPath = path
+        if bestPath:
+            stack.append(bestPath)
+            boardVisited.add(bestPath.map)
+            if bestPath.depth > MaxSearchDeep:
+                MaxSearchDeep = 1 + MaxSearchDeep
+        if len(stack) > MaxFrontier:
+            MaxFrontier = len(stack)
+
+#Best First Search*************************************************
+def best_first_search(startState):
+    global MaxFrontier, GoalNode, MaxSearchDeep
+
+    boardVisited = set()
+    priorityQueue = []
+    startNode = PuzzleState(startState, None, None, 0, 0, 0)
+    heapq.heappush(priorityQueue, (Heuristic(startNode), startNode))  # You need to define the evaluate function
+
+    while priorityQueue:
+        _, node = heapq.heappop(priorityQueue)
+        boardVisited.add(node.map)
+
+        if node.state == GoalState:
+            GoalNode = node
+            return
+
+        possiblePaths = subNodes(node)
+        for path in possiblePaths:
+            if path.map not in boardVisited:
+                heapq.heappush(priorityQueue, (Heuristic(path), path))
+                boardVisited.add(path.map)
+                if path.depth > MaxSearchDeep:
+                    MaxSearchDeep = 1 + MaxSearchDeep
+
+        if len(priorityQueue) > MaxFrontier:
+            MaxFrontier = len(priorityQueue)
+
+#Best Cost Search**************************************************
+
+def best_cost_search(startState):
+    global MaxFrontier, GoalNode, MaxSearchDeep
+
+    boardVisited = set()
+    priorityQueue = []
+    startNode = PuzzleState(startState, None, None, 0, 0, 0)
+    heapq.heappush(priorityQueue, (0, startNode))  # The start node has cost 0
+
+    while priorityQueue:
+        _, node = heapq.heappop(priorityQueue)
+        boardVisited.add(node.map)
+
+        if node.state == GoalState:
+            GoalNode = node
+            return
+
+        possiblePaths = subNodes(node)
+        for path in possiblePaths:
+            if path.map not in boardVisited:
+                pathCost = cost(node.state, path.state)  # Use the cost function here
+                heapq.heappush(priorityQueue, (pathCost, path))
+                boardVisited.add(path.map)
+                if path.depth > MaxSearchDeep:
+                    MaxSearchDeep = 1 + MaxSearchDeep
+
+        if len(priorityQueue) > MaxFrontier:
+            MaxFrontier = len(priorityQueue)
 
 #AST**************************************************************
 def ast(startState):
@@ -114,7 +202,7 @@ def ast(startState):
                 if path.depth > MaxSearchDeep:
                     MaxSearchDeep = 1 + MaxSearchDeep
         
-        
+
 #Heuristic: distance to root numbers
 values_0 = [0,1,2,1,2,3,2,3,4]
 values_1 = [1,0,1,2,1,2,3,2,3]
@@ -141,9 +229,15 @@ def Heuristic(node):
     valorTotal = v0+v1+v2+v3+v4+v5+v6+v7+v8
     return valorTotal
     
-        
+#Cost: evaluate cost of path
+def cost(currentState, goalState):
+    cost = 0
+    for i in range(len(currentState)):
+        currentRow, currentCol = divmod(currentState.index(i), 3)
+        goalRow, goalCol = divmod(goalState.index(i), 3)
+        cost += abs(currentRow - goalRow) + abs(currentCol - goalCol)
+    return cost
 
-    
 #Obtain Sub Nodes********************************************************
 def subNodes(node):
 
@@ -343,13 +437,20 @@ def main():
     #Start operation
     start = timeit.default_timer()
 
-    function = args.method
-    if(function=="bfs"):
-        bfs(InitialState)
-    if(function=="dfs"):
-        dfs(InitialState)  
-    if(function=="ast"):
+    function = args.method 
+    if(function=="bfs"): #breath first search
+        bfs(InitialState) 
+    if(function=="dfs"): #depth first search
+        dfs(InitialState) 
+    if(function=="ast"): #a*star search
         ast(InitialState) 
+    if(function=="hil"): #hill climbing search
+        hill_climbing(InitialState)
+    if(function=="bes"): #best first search
+        best_first_search(InitialState)
+    if(function=="bcs"): #best cost search
+        best_cost_search(InitialState)
+        
 
     stop = timeit.default_timer()
     time = stop-start
